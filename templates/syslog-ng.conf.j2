@@ -1,0 +1,35 @@
+@version: {{ syslog_config_version }}
+# {{ ansible_managed }}
+
+{% if syslog_scl is defined %}
+@include "{{ syslog_scl }}"
+{% endif %}
+
+options {
+  stats_freq (0);
+  flush_lines (0);
+  time_reopen (10);
+  log_fifo_size (10000);
+  chain_hostnames (off);
+  use_dns (no);
+  dns-cache(no);
+  use_fqdn (no);
+  create_dirs (no);
+  keep_hostname (yes);
+  perm(0640);
+  {% if syslog_options_group -%}
+  group("{{ syslog_options_group | default('adm', true) }}");
+  {% endif -%}
+  chain_hostnames(no);
+  stats_freq(43200);
+  mark_freq(3600);
+  ts_format(iso);
+};
+
+# The custom template for file destinations.
+template tmpl { template("{{ syslog_default_template }}"); };
+
+@include "conf.d/sources.conf"
+@include "conf.d/destinations.conf"
+@include "conf.d/filters.conf"
+@include "conf.d/logs.conf"

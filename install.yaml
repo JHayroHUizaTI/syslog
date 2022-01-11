@@ -1,0 +1,101 @@
+---
+- name: install and configure syslog-ng service
+  hosts: syslog
+  become: true
+  become_user: root
+  tasks:
+  - name: add repo epel
+    yum_repository: 
+      name: epel
+      description: EPEL YUM repo
+      baseurl: https://download.fedoraproject.org/pub/epel/$releasever/$basearch/
+      enabled: yes
+      gpgcheck: no
+    when: 
+      ansible_distribution == "CentOS"
+    register: repo
+  - debug:
+      var: repo
+  - yum:
+      name: epel*
+      state: latest
+  - name: Collect Repo id  from yum repolist -v
+    yum:
+     update_cache: yes
+    register: repo
+  - debug:
+      var: repo
+  - name: install syslog service
+    yum:
+      name: "{{ packages }}"
+      state: latest
+    vars:
+      packages:
+      - syslog-ng
+      - syslog-ng-libdbi
+    register: install
+  - debug:
+      var: install
+  
+  - name: started rsyslogs service 
+    service:
+      name: rsyslog
+      state: started 
+  
+  - name: start/enable syslog
+    service:
+      name: syslog-ng
+      state: started
+      enabled: yes
+
+  - name: create /etc/syslog-ng/conf.d
+    file:
+      name: /etc/syslog-ng/conf.d
+      state: directory
+      mode: 0750
+
+  - name: create /var/log/syslog
+    file:
+      name: /var/log/syslog/
+      state: directory
+      mode: 0750 
+
+  - name: configure syslog-ng.conf
+    copy:
+      src: syslog-ng.conf
+      dest: /etc/syslog-ng/syslog-ng.conf
+    notify: restart syslog-ng
+    tags:
+      - syslog-ng
+      - configuration
+  - yum:
+      name: policycoreutils-python
+      state: present
+  - name: 
+    raw: 
+      cmd: semanage fcontext -a -t var_log_t "/var/log/syslog(/.*)?" 
+  - raw:
+      cmd: restorecon -Rv /all_srv_remote_logs/
+  handlers:
+    - name: reload syslog-ng
+      service:
+        name: syslog
+        state: reloaded
+
+    - name: restart syslog-ng
+      service:
+        name: syslog
+        state: restarted
+
+    - name: reload systemctl daemon
+      systemd:
+        daemon_reload: true
+        when: ansible_service_mgr == 'systemd'
+
+    - name: restart systemd-journald
+      service:
+        name: systemd-journald
+        state: restarted
+    
+
+        

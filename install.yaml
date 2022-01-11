@@ -72,10 +72,10 @@
       name: policycoreutils-python
       state: present
   - name: 
-    raw: 
+    shell: 
       cmd: semanage fcontext -a -t var_log_t "/var/log/syslog(/.*)?" 
-  - raw:
-      cmd: restorecon -Rv /all_srv_remote_logs/
+  - shell:
+      cmd: restorecon -Rv /var/log/syslog/
   handlers:
     - name: reload syslog-ng
       service:
